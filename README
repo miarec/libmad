@@ -143,41 +143,111 @@ Portability Issues
 
 BUILDING AND INSTALLING
 
-Windows Platforms
+We use CMake to build the project.
 
-  MAD can be built under Windows using either MSVC++ or Cygwin. A MSVC++
-  project file can be found under the `msvc++' subdirectory.
+Moder CMake (3.14) instructions:
 
-  To build libmad using Cygwin, you will first need to install the Cygwin
-  tools:
+    cmake -S . -B build
+    cmake --build build
+    cmake --build build -t test
 
-      http://www.cygwin.com/
+This will make a build directory (`-B`) if it does not exist, with the source 
+directory defined as `-S`.  CMake will configure and generate makefiles by 
+default, as well as set all options to their default settings and cache them 
+into a file called `CMakeCache.txt`, which will sit in the build directory. 
+You can call the build directory anything you want; by convention it should 
+have the word build in it to be ignored by most package’s `.gitignore` files.
 
-  You may then proceed with the following POSIX instructions within the
-  Cygwin shell.
+You can then invoke your build system (line 2). Regardless of whether you used 
+`make` (the default), `ninja`, or even an IDE-based system, you can build with
+a uniform command. You can add `-j 2` to build on two cores, or `-v` to 
+verbosely show commands used to build.
 
-  Note that by default Cygwin will build a library that depends on the
-  Cygwin DLL. You can use MinGW to build a library that does not depend on
-  the Cygwin DLL. To do so, give the option --host=mingw32 to `configure'.
+Finally, you can even run your tests from here, by passing the `test` target 
+to the underlying build system. `-t` (`--target` before CMake 3.15) lets you 
+select a target. 
 
-POSIX Platforms (including Cygwin)
+There’s also a `cmake <dir> --install` command in CMake 3.15+ that does the 
+install - without invoking the underlying build system!
 
-  The code is distributed with a `configure' script that will generate for
-  you a `Makefile' and a `config.h' for your platform. See the file
-  `INSTALL' for generic instructions.
+The classic, battle hardened method should be shown for completeness:
 
-  The specific options you may want to give `configure' are:
+    mkdir build
+    cd build
+    cmake ..
+    make
+    make test
 
-      --enable-speed            optimize for speed over accuracy
 
-      --enable-accuracy         optimize for accuracy over speed
+PICKING A COMPLILER
 
-      --disable-debugging       do not compile with debugging support, and
-                                use more optimizations
+Selecting a compiler must be done on the first run in an empty directory. 
+It's not CMake syntax per se, but you might not be familiar with it. 
+To pick Clang:
 
-      --disable-shared          do not build a shared library
+    CC=clang CXX=clang++ cmake -S . -B build
 
-  Note that you need not specify one of --enable-speed or --enable-accuracy;
+That sets the environment variables in bash for CC and CXX, and CMake will
+respect those variables. This sets it just for that one line, but that's the 
+only time you'll need those; afterwards CMake continues to use the paths it
+deduces from those values.
+
+
+PICKING A GENERATO
+
+You can build with a variety of tools; make is usually the default. To see 
+all the tools CMake knows about on your system, run
+
+    cmake --help
+
+And you can pick a tool with -G"My Tool" (quotes only needed if spaces are 
+in the tool name). You should pick a tool on your first CMake call in a 
+directory, just like the compiler. Feel free to have several build directories,
+like `build` and `build-xcode`. You can set the environment variable 
+`CMAKE_GENERATOR` to control the default generator (CMake 3.15+). Note that 
+makefiles will only run in parallel if you explicitly pass a number of threads,
+such as `make -j2`, while Ninja will automatically run in parallel. You can 
+directly pass a parallelization option such as `-j 2` to the `cmake --build .` 
+command in recent versions of CMake as well.
+
+
+OPTIONS
+
+CMake has support for cached options. A Variable in CMake can be marked as 
+"cached", which means it will be written to the cache (a file called 
+`CMakeCache.txt` in the build directory) when it is encountered. You can preset
+(or change) the value of a cached option on the command line with `-D`. 
+When CMake looks for a cached variable, it will use the existing value and will
+not overwrite it.
+
+STANDARD OPTIONS
+
+These are common CMake options to most packages:
+
+- `CMAKE_BUILD_TYPE`: Pick from `Release`, `RelWithDebInfo`, `Debug`, or 
+    sometimes more.
+- `CMAKE_INSTALL_PREFIX`: The location to install to. System install on UNIX 
+    would often be `/usr/local` (the default), user directories are often
+    `~/.local`, or you can pick a folder.
+
+- `BUILD_SHARED_LIBS`: You can set this ON or OFF to control the default for 
+    shared libraries (the author can pick one vs. the other explicitly instead
+    of using the default, though)
+- `BUILD_TESTING`: This is a common name for enabling tests, not all packages 
+    use it, though, sometimes with good reason.
+
+Intructions are based on [Modern CMake intro/running](https://cliutils.gitlab.io/modern-cmake/chapters/intro/running.html)
+
+
+LIBMAD-SPECIFIC OTPIONS
+
+The specific options you may want to give `configure' are:
+
+    OPT_SPEED                 optimize for speed over accuracy
+
+    OPT_ACCURACY              optimize for accuracy over speed
+
+  Note that you need not specify one of `-DOPT_SPEED` or `-DOPT_ACCURACY`;
   in its default configuration, MAD is optimized for both. You should only
   use one of these options if you wish to compromise speed or accuracy for
   the other.
@@ -188,16 +258,11 @@ POSIX Platforms (including Cygwin)
   It is not normally necessary to use the following options, but you may
   fine-tune the configuration with them if desired:
 
-      --enable-fpm=ARCH         use the ARCH-specific version of the
-                                fixed-point math assembly routines
-                                (current options are: intel, arm, mips,
-                                sparc, ppc; also allowed are: 64bit, approx)
-
-      --enable-sso              use the subband synthesis optimization,
+      OPT_SSO                   use the subband synthesis optimization,
                                 with reduced accuracy
 
-      --disable-aso             do not use certain architecture-specific
-                                optimizations
+      ASO=OFF                   do not use certain architecture-specific
+                                optimizations (by default, enabled)
 
   By default an appropriate fixed-point assembly routine will be selected
   for the configured host type, if it can be determined. Thus if you are
@@ -214,12 +279,7 @@ Experimenting and Developing
   Further options for `configure' that may be useful to developers and
   experimenters are:
 
-      --enable-debugging        enable diagnostic debugging support and
-                                debugging symbols
-
-      --enable-profiling        generate `gprof' profiling code
-
-      --enable-experimental     enable code using the EXPERIMENTAL
+      --EXPERIMENTAL            enable code using the EXPERIMENTAL
                                 preprocessor define
 
 ===============================================================================
