@@ -186,6 +186,7 @@ foreach( header_file ${EXPORTED_HEADERS} )
    file( APPEND ${MAD_H} "// \"${header_file}\"\n\n${HEADER_DATA_REPLACED}\n" )
 endforeach()
 
+file( APPEND ${MAD_H} "# ifdef __cplusplus\n}\n# endif\n#endif\n" )
 
 target_include_directories(${PROJECT_NAME}
     PRIVATE
