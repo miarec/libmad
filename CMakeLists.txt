@@ -26,7 +26,7 @@ message(STATUS "Building version ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PAT
 #-------------------------------------------------------------------------------
 # Project definition
 #-------------------------------------------------------------------------------
-project (libmad 
+project (mad 
   VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH} 
   LANGUAGES C
 )
